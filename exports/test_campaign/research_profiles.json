@@ -1,0 +1,47 @@
+[
+  {
+    "company_id": "c425d558-8e6f-43a2-9ed1-c9f8e3d45fa3",
+    "summary": "Mock Employee Engagement Ventures GoogleSearch is an innovative enterprise focusing on modern scalability within its market sector. Recent milestones include product expansions and AI integrations.",
+    "hiring_signals": [
+      {
+        "insight": "Active hiring identified for roles such as Senior Software Engineer (Backend) and Product Manager.",
+        "source_url": "https://mock-employeeengagement-ventures.com/careers"
+      }
+    ],
+    "growth_indicators": [
+      {
+        "insight": "LinkedIn followers growth of 18.5% indicating strong brand expansion for Mock Employee Engagement Ventures GoogleSearch.",
+        "source_url": "https://linkedin.com/company/mockemployeeengagementventuresgooglesearch"
+      },
+      {
+        "insight": "Recent social post: We are hiring! Looking for engineers to join our fast-growing team at Mock Employee Engagement Ventures GoogleSearch.",
+        "source_url": "https://linkedin.com/company/mockemployeeengagementventuresgooglesearch/posts/1"
+      },
+      {
+        "insight": "Mock Employee Engagement Ventures GoogleSearch expands its operations in North America and EMEA",
+        "source_url": "https://mock-employeeengagement-ventures.com/news/2"
+      }
+    ],
+    "public_pain_points": [
+      {
+        "insight": "Hiring pain point identified: Scale backend API performance and handle higher traffic throughput",
+        "source_url": "https://mock-employeeengagement-ventures.com/careers/jobs/eng-1"
+      }
+    ],
+    "why_now": "The company's rapid hiring indicates team growth, while backend scaling bottlenecks represent immediate friction Outur AI can alleviate.",
+    "recommended_pitch": "Automate lead sourcing and candidate outreach workflows directly for Mock Employee Engagement Ventures GoogleSearch's talent acquisition team using autonomous agent squads.",
+    "best_contact": {
+      "full_name": "Sarah Jenkins",
+      "job_title": "VP of People Operations at Mock Employee Engagement Ventures GoogleSearch",
+      "rationale": "Key HR decision-maker with a contact confidence score of 90."
+    },
+    "outreach_angles": [
+      "Offer to streamline Mock Employee Engagement Ventures GoogleSearch's outbound campaigns with custom AI agents.",
+      "Suggest automated sourcing for active tech recruitments."
+    ],
+    "next_recommended_action": "Draft custom email sequencing for Sarah Jenkins highlighting candidate generation capabilities.",
+    "llm_confidence": 95,
+    "data_quality": 85,
+    "freshness_score": 90
+  }
+]

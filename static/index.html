@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outur AI - Lead Intelligence Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="brand">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                <h2>Outur AI</h2>
+            </div>
+            <nav>
+                <a href="#" class="active" id="nav-dashboard">Dashboard</a>
+                <a href="#" id="nav-campaigns">Campaigns</a>
+                <a href="#" id="nav-discovery">Discovery</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>Lead Intelligence Dashboard</h1>
+                <button class="btn btn-primary" onclick="openNewCampaignModal()">+ New Campaign</button>
+            </header>
+
+            <div class="content-area">
+                <!-- Top Metrics Bar -->
+                <div class="metrics-bar" id="metrics-bar">
+                    <div class="metric-card">
+                        <span class="metric-label">Prospects Today</span>
+                        <span class="metric-value" id="metric-prospects">0</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Qualified</span>
+                        <span class="metric-value" id="metric-qualified">0</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Verified Emails</span>
+                        <span class="metric-value" id="metric-verified">0</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">High Opportunity</span>
+                        <span class="metric-value highlight" id="metric-high-opp">0</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Emails Sent</span>
+                        <span class="metric-value" id="metric-sent">0</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Replies</span>
+                        <span class="metric-value" id="metric-replies">0</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Positive Replies</span>
+                        <span class="metric-value success" id="metric-positive">0</span>
+                    </div>
+                </div>
+
+                <!-- Campaigns Table -->
+                <div class="card table-card mt-4">
+                    <h3>Active Campaigns</h3>
+                    <table id="campaigns-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>Targets</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="campaigns-tbody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-overlay" class="modal-overlay" style="display: none;"></div>
+    
+    <!-- New Campaign Modal -->
+    <div id="new-campaign-modal" class="modal" style="display: none;">
+        <div class="modal-header">
+            <h3>Create New Campaign</h3>
+            <button class="close-btn" onclick="closeModals()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="new-campaign-form">
+                <div class="form-group">
+                    <label>Campaign Name</label>
+                    <input type="text" id="campaign-name" required placeholder="e.g. Q3 Fintech Outreach">
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Create & Discover Leads</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Campaign Details Modal -->
+    <div id="campaign-details-modal" class="modal modal-xl" style="display: none;">
+        <div class="modal-header">
+            <h3 id="detail-campaign-name">Campaign Intelligence</h3>
+            <button class="close-btn" onclick="closeModals()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="action-bar mb-4">
+                <button class="btn btn-secondary" onclick="generateDrafts()">Generate Outreach Drafts</button>
+                <button class="btn btn-primary" onclick="sendCampaign()">Send Campaign Emails</button>
+            </div>
+            <!-- Company Intelligence Detail View will be injected here per draft/company -->
+            <div id="drafts-container" class="intelligence-grid">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>
