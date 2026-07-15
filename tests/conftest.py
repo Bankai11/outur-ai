@@ -18,6 +18,22 @@ pytest.ini configures three markers:
 
 from __future__ import annotations
 
+import os
+# Force test environment variables before settings are imported/loaded
+os.environ["APP_ENV"] = "testing"
+os.environ["GEMINI_API_KEY"] = "test-key"
+os.environ["GEMINI_MODEL"] = "gemini-2.0-flash"
+os.environ["APP_SECRET_KEY"] = "test-secret-key-must-be-at-least-32-chars"
+os.environ["JWT_SECRET_KEY"] = "test-jwt-key-must-be-at-least-32-chars!!"
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
+
+# Clean up stale test cache db
+if os.path.exists(".outur_cache_test.db"):
+    try:
+        os.remove(".outur_cache_test.db")
+    except OSError:
+        pass
+
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -46,6 +62,7 @@ def test_settings() -> Settings:
     """
     get_settings.cache_clear()
     settings = Settings(
+        _env_file=None,
         app_env="testing",
         app_debug=True,
         app_secret_key="test-secret-key-must-be-at-least-32-chars",
@@ -54,9 +71,19 @@ def test_settings() -> Settings:
         log_level="DEBUG",
         log_format="console",
         gemini_api_key="test-key",
+        resend_webhook_signing_secret="whsec_dGVzdC1zZWNyZXQ=",
     )
     yield settings
     get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def mock_get_settings(test_settings: Settings):
+    """Globally override get_settings for all tests to avoid loading local .env secrets."""
+    from unittest.mock import patch
+    with patch("core.config.get_settings", return_value=test_settings):
+        yield
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -114,3 +141,10 @@ async def async_client(app: FastAPI) -> AsyncGenerator[AsyncClient, None]:
         base_url="http://testserver",
     ) as client:
         yield client
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def override_db_dependency(app: FastAPI, db_session: AsyncSession) -> None:
+    """Override FastAPI get_session dependency with the in-memory test session."""
+    from api.deps import get_session
+    app.dependency_overrides[get_session] = lambda: db_session

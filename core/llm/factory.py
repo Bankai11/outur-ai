@@ -12,6 +12,8 @@ def get_llm_provider() -> BaseLLMProvider:
     Get the configured LLM provider instance.
     Currently returns GeminiLLMProvider, but can be extended based on configuration.
     """
-    # E.g. settings = get_settings()
-    # if settings.llm_provider == "openai": ...
+    settings = get_settings()
+    if settings.app_env == "testing":
+        from core.llm.mock import MockLLMProvider
+        return MockLLMProvider()
     return GeminiLLMProvider()

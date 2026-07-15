@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.deps import get_session
 from agents.scout.agent import ScoutAgent
 from agents.researcher.agent import ResearcherAgent
-from agents.researcher.research_profile_agent import ResearchProfileAgent
+from agents.researcher.sales_intelligence_agent import SalesIntelligenceAgent
 from agents.scorer.agent import ScorerAgent
 from core.models.company import Company
 from core.utils.pagination import OffsetParams, PaginatedResponse
@@ -36,34 +36,39 @@ class ContactSchema(BaseModel):
     confidence_score: int
 
 
-class InsightSchema(BaseModel):
-    insight: str
-    source_url: str | None = None
-
-
-class BestContactSchema(BaseModel):
-    full_name: str
-    job_title: str
-    rationale: str
-
-
-class ResearchProfileSchema(BaseModel):
+class SalesIntelligenceProfileSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     company_id: UUID
-    summary: str
-    hiring_signals: list[InsightSchema]
-    growth_indicators: list[InsightSchema]
-    public_pain_points: list[InsightSchema]
-    why_now: str
-    recommended_pitch: str
-    best_contact: BestContactSchema | None = None
-    outreach_angles: list[str]
-    next_recommended_action: str
-    raw_evidence: dict[str, Any] = {}
-    llm_confidence: int
-    data_quality: int
-    freshness_score: int
+    executive_summary: str | None = None
+    business_overview: str | None = None
+    business_model: str | None = None
+    target_customers: str | None = None
+    products_services: str | None = None
+    growth_stage: str | None = None
+    strategic_initiatives: str | None = None
+    competitive_landscape: str | None = None
+    key_differentiators: str | None = None
+    recent_news: list[dict[str, Any]] = []
+    recent_funding: dict[str, Any] | None = None
+    technology_stack: list[str] = []
+    
+    hiring_activity: str | None = None
+    hiring_signals: list[dict[str, Any]] = []
+    buying_signals: list[dict[str, Any]] = []
+    digital_transformation_signals: list[dict[str, Any]] = []
+    
+    pain_points: list[dict[str, Any]] = []
+    product_value_mapping: list[dict[str, Any]] = []
+    potential_decision_makers: list[dict[str, Any]] = []
+    communication_style: str | None = None
+    risk_assessment: str | None = None
+    sales_opportunity_summary: str | None = None
+    
+    outreach_intelligence: dict[str, Any] = {}
+    
+    confidence_score: int
+    supporting_sources: list[str] = []
     last_verified_at: Any
 
 
@@ -83,7 +88,7 @@ class CompanySchema(BaseModel):
     tier: str | None = None
     score_signals: list[str] | None = None
     contacts: list[ContactSchema] = []
-    research_profile: ResearchProfileSchema | None = None
+    sales_intelligence_profile: SalesIntelligenceProfileSchema | None = None
 
 
 class DiscoveryRequest(BaseModel):
@@ -131,7 +136,7 @@ class ScoreResponse(BaseModel):
 
 class ProfileResponse(BaseModel):
     success: bool
-    data: ResearchProfileSchema
+    data: SalesIntelligenceProfileSchema
     errors: list[str]
 
 
@@ -168,7 +173,7 @@ async def list_companies(
         select(Company)
         .options(
             selectinload(Company.contacts),
-            selectinload(Company.research_profile)
+            selectinload(Company.sales_intelligence_profile)
         )
         .where(Company.id.in_([c.id for c in items]))
         .order_by(Company.created_at.desc())
@@ -297,24 +302,24 @@ async def score_company(
     return result
 
 
-@router.post("/{company_id}/profile", response_model=ProfileResponse, status_code=status.HTTP_201_CREATED)
-async def profile_company(
+@router.post("/{company_id}/sales-intelligence", response_model=ProfileResponse, status_code=status.HTTP_201_CREATED)
+async def generate_sales_intelligence(
     company_id: UUID,
     refresh: bool = False,
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     """
-    Generate or fetch the cached research context profile for a company.
+    Generate or fetch the cached sales intelligence profile for a company.
     """
-    log.info("Triggering company profiling", company_id=str(company_id), refresh=refresh)
+    log.info("Triggering sales intelligence generation", company_id=str(company_id), refresh=refresh)
 
-    agent = ResearchProfileAgent()
+    agent = SalesIntelligenceAgent()
     result = await agent.run(company_id=company_id, refresh=refresh, session=session)
 
     if not result.get("success"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Profiling failed: {', '.join(result.get('errors', []))}",
+            detail=f"Intelligence generation failed: {', '.join(result.get('errors', []))}",
         )
 
     return result

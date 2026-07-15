@@ -1,0 +1,123 @@
+company_name: "KultrXP"
+product_name: "KultrXP Employee Experience Platform"
+elevator_pitch: "KultrXP is a data-driven platform that measures real-time employee engagement to help leadership reduce turnover and increase productivity."
+target_icp: "Mid-market to enterprise companies (500-5000 employees) in tech, finance, or healthcare that are rapidly scaling or struggling with retention."
+
+primary_buyer_personas:
+  - "CHRO / VP of HR"
+  - "Director of People & Culture"
+  - "VP of Operations"
+
+core_pain_points_solved:
+  - "High employee turnover and replacement costs"
+  - "Disengaged employees negatively impacting productivity"
+  - "Lack of visibility into employee sentiment across distributed teams"
+  - "HR teams spending too much time on manual surveys and reporting"
+
+key_differentiators:
+  - "Real-time sentiment analysis vs quarterly static surveys"
+  - "Actionable leadership dashboards with predictive turnover risk"
+  - "Seamless integration with Slack, Teams, and HRIS systems"
+
+customer_outcomes:
+  - "Reduce voluntary turnover by up to 25%"
+  - "Identify flight risks 60 days before they resign"
+  - "Save HR teams 20+ hours per month on reporting"
+
+desired_outcomes:
+  - "Want measurable culture metrics to present to the board"
+  - "Need to quickly onboard and align a rapidly growing remote team"
+
+objection_handling:
+  "We already use CultureAmp/Lattice": "CultureAmp is great for bi-annual performance reviews, but KultrXP gives you real-time predictive data to prevent turnover before it happens."
+  "We don't have budget right now": "KultrXP typically pays for itself by preventing just one mid-level employee from leaving. Can we look at your current replacement costs?"
+  "Our employees have survey fatigue": "KultrXP uses passive signals and micro-polls embedded in Slack/Teams, completely eliminating survey fatigue."
+
+call_to_action_styles:
+  - "Soft ask: 'Open to learning how other [Industry] companies are handling this?'"
+  - "Direct value: 'Can I share a quick 2-minute video on how we predict flight risks?'"
+  - "Consultative: 'Are you currently tracking real-time sentiment, or relying on annual surveys?'"
+
+subject_line_rules:
+  - "Keep it under 5 words."
+  - "Use lowercase text like a normal internal email."
+  - "No clickbait or obvious sales tactics."
+  - "Reference their company name or the trigger event if possible."
+
+brand_voice: "Data-driven, empathetic, and consultative"
+email_tone: "Peer-to-peer, professional but casual, focused on their specific challenges"
+
+follow_up_strategy:
+  - "Day 3: Provide a relevant case study or data point."
+  - "Day 7: Breakup email offering to stay in touch."
+
+case_studies:
+  - "TechCorp reduced turnover by 22% in 6 months using KultrXP's predictive alerts."
+  - "HealthPlus saved 40 hours a month on HR reporting while increasing engagement by 15%."
+
+social_proof:
+  - "Trusted by over 500 fast-growing organizations."
+  - "Named a Leader in Employee Experience by G2."
+
+pricing_positioning: "Value-based pricing starting at $10/user/month, scaling with features."
+
+competitor_positioning:
+  "CultureAmp": "Legacy tool focused on performance reviews, not real-time engagement."
+  "Lattice": "Good for goal tracking, but lacks predictive turnover analytics."
+
+messaging_guardrails:
+  - "Always focus on the cost of turnover and productivity, not just 'happiness'."
+  - "Keep sentences short and readable."
+  - "Never sound desperate or pushy."
+
+forbidden_claims:
+  - "We guarantee 100% retention."
+  - "We can read employee's private messages."
+
+triggers:
+  - event: "Hiring surge"
+    description: "Company is actively hiring many roles or grew headcount rapidly."
+    relevance_to_product: "Rapid scaling often breaks culture. They need to ensure new hires integrate well and maintain engagement."
+  - event: "Funding announcement"
+    description: "Company recently raised a Series A, B, or C."
+    relevance_to_product: "They have budget and are expected to scale, making culture and retention a top priority for investors."
+  - event: "New office"
+    description: "Opening a new location."
+    relevance_to_product: "Expanding geographic footprint introduces culture fragmentation risks."
+  - event: "Hybrid work adoption"
+    description: "Company recently announced a shift to remote or hybrid work."
+    relevance_to_product: "Remote teams are harder to track for engagement and burnout."
+  - event: "HR leadership hire"
+    description: "Recently hired a new CHRO or VP of People."
+    relevance_to_product: "New leaders typically evaluate and replace existing HR tech stacks in their first 90 days."
+  - event: "Glassdoor reviews mentioning culture"
+    description: "Recent negative or mixed reviews about culture or management."
+    relevance_to_product: "Clear evidence they have an engagement problem they need to fix to attract talent."
+  - event: "Employee engagement initiative"
+    description: "Company announced a focus on wellness, diversity, or culture."
+    relevance_to_product: "They are already bought into the value of engagement, making them an easier sell."
+  - event: "Rapid headcount growth"
+    description: "Headcount increased by >20% in the last 6-12 months."
+    relevance_to_product: "High risk of culture dilution and 'growing pains'."
+
+playbooks:
+  - name: "Growth Playbook"
+    target_triggers: ["Hiring surge", "Funding announcement", "Rapid headcount growth", "New office"]
+    messaging_strategy: "Focus on the risks of culture breaking during rapid scaling. Position KultrXP as the tool to maintain alignment and predict flight risks before new hires leave."
+    objection_handling: {"We are too busy scaling right now": "That's exactly why you need this; scaling without measuring engagement leads to mass turnover in 6 months."}
+    cta_style: "Ask if they are concerned about maintaining culture during this growth phase."
+  - name: "Remote/Hybrid Playbook"
+    target_triggers: ["Hybrid work adoption"]
+    messaging_strategy: "Focus on the difficulty of reading the room when there is no room. Emphasize KultrXP's passive signals and Slack/Teams integrations to measure remote burnout."
+    objection_handling: {"Our remote team is fine": "Most remote burnout is invisible until the resignation letter. Are you tracking passive digital signals?"}
+    cta_style: "Ask how they currently measure remote employee sentiment."
+  - name: "HR Efficiency Playbook"
+    target_triggers: ["Employee engagement initiative", "HR leadership hire"]
+    messaging_strategy: "Focus on saving the HR team time. Highlight how KultrXP replaces manual surveys with automated, real-time dashboards."
+    objection_handling: {"We already do annual surveys": "Annual surveys take weeks to analyze and the data is stale. KultrXP gives you daily insights with zero manual work."}
+    cta_style: "Ask if they are spending too much time manually analyzing survey data."
+  - name: "Leadership Visibility Playbook"
+    target_triggers: ["Glassdoor reviews mentioning culture"]
+    messaging_strategy: "Acknowledge the public feedback subtly and offer a way for leadership to get ahead of the narrative with real, predictive data."
+    objection_handling: {"Those reviews are just disgruntled ex-employees": "Even if true, it impacts your employer brand. KultrXP helps you prove to candidates that your current team is engaged."}
+    cta_style: "Offer a quick way to show leadership real-time culture metrics."

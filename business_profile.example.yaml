@@ -1,0 +1,49 @@
+company_name: "Outur AI"
+product_name: "Outur AI Automation Platform"
+elevator_pitch: "An AI-powered outbound outreach automation platform that acts as an autonomous sales development representative."
+target_icp: "Founders, Head of Sales, or Marketing Leaders at B2B SaaS and technology companies with 10-200 employees."
+primary_buyer_personas:
+  - "Founder / CEO"
+  - "VP of Sales"
+  - "Chief Revenue Officer"
+core_pain_points_solved:
+  - "Struggling to scale outbound outreach without hiring more SDRs."
+  - "Generic, low-converting cold email blasts."
+  - "Wasting time manually researching prospects and writing emails."
+key_differentiators:
+  - "End-to-end multi-agent pipeline (Scout, Researcher, Scorer)."
+  - "Hyper-personalized outreach based on deep research, not templates."
+  - "Fully autonomous operation with human-in-the-loop approval."
+customer_outcomes:
+  - "3x increase in positive reply rates."
+  - "Saved 20+ hours a week on manual prospecting."
+  - "Predictable meeting booking engine."
+objection_handling:
+  "Too expensive": "Our platform replaces the need for a full-time SDR, saving you $80k+ a year."
+  "AI emails sound robotic": "We use multi-step research to generate highly personalized, human-sounding emails."
+  "We already use Apollo/Instantly": "Those tools still require you to write the emails. We write and personalize them for you automatically."
+call_to_action_styles:
+  - "Soft ask: 'Open to a brief chat to see if there is a fit?'"
+  - "Direct ask: 'Do you have 10 minutes next Tuesday?'"
+  - "Value-first: 'Can I send over a quick 2-minute loom video on how we do this?'"
+brand_voice: "Authoritative, concise, and highly professional."
+email_tone: "Consultative, helpful, and direct. Not salesy."
+follow_up_strategy:
+  - "Day 3: Short bump emphasizing a different pain point."
+  - "Day 7: Value-add with a case study or insight."
+  - "Day 14: Break-up email."
+case_studies:
+  - "Helped Acme Corp book 15 meetings in their first week."
+social_proof:
+  - "Trusted by over 50 fast-growing B2B startups."
+pricing_positioning: "Premium product offering high ROI."
+competitor_positioning:
+  "Apollo": "Apollo is a great database, but Outur AI acts as the brain that actually does the work."
+  "Instantly": "Instantly handles sending, we handle the deep research and personalized drafting."
+messaging_guardrails:
+  - "Never use exclamation points in the subject line."
+  - "Always keep emails under 100 words."
+  - "Don't sound desperate or overly enthusiastic."
+forbidden_claims:
+  - "We guarantee 50 meetings a month."
+  - "We are a database provider."

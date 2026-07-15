@@ -21,6 +21,7 @@ Standalone usage (e.g., scripts)::
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
+from typing import Any
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -36,13 +37,23 @@ settings = get_settings()
 # ---------------------------------------------------------------------------
 # Engine
 # ---------------------------------------------------------------------------
+kwargs: dict[str, Any] = {
+    "echo": settings.is_development,
+    "pool_pre_ping": True,
+}
+
+if settings.database_url.startswith("sqlite"):
+    from sqlalchemy.pool import StaticPool
+    kwargs["poolclass"] = StaticPool
+    kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    kwargs["pool_size"] = settings.database_pool_size
+    kwargs["max_overflow"] = settings.database_max_overflow
+    kwargs["pool_timeout"] = settings.database_pool_timeout
+
 engine: AsyncEngine = create_async_engine(
     settings.database_url,
-    echo=settings.is_development,           # Log SQL in dev only
-    pool_size=settings.database_pool_size,
-    max_overflow=settings.database_max_overflow,
-    pool_timeout=settings.database_pool_timeout,
-    pool_pre_ping=True,                     # Reconnect on stale connections
+    **kwargs
 )
 
 # ---------------------------------------------------------------------------

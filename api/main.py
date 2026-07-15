@@ -27,7 +27,7 @@ from fastapi.responses import ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from api.middleware.logging import RequestLoggingMiddleware
-from api.routers import health, companies, campaigns, webhooks, dashboard
+from api.routers import health, companies, campaigns, webhooks, dashboard, analytics, metrics
 from core.config import get_settings
 from core.database import check_db_connection, engine
 from core.logger import configure_logging, get_logger
@@ -139,6 +139,8 @@ def create_app() -> FastAPI:
     app.include_router(campaigns.router, prefix="/api/v1/campaigns", tags=["Campaigns"])
     app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
     app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
+    app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
+    app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["Metrics"])
     # app.include_router(leads.router,     prefix="/api/v1/leads",     tags=["Leads"])
 
     # Mount static files for the dashboard

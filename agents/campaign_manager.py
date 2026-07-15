@@ -17,14 +17,16 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agents.researcher.research_profile_agent import ResearchProfileAgent
+from agents.campaign_qa.campaign_qa_engine import CampaignQAEngine
+from agents.researcher.sales_intelligence_agent import SalesIntelligenceAgent
+from core.config.business_profile import get_business_profile
 from core.llm import get_llm_provider
 from core.logger import get_logger
 from core.models.campaign import Campaign
 from core.models.company import Company
 from core.models.contact import Contact
 from core.models.outreach_draft import OutreachDraft
-from core.models.research_profile import ResearchProfile
+from core.models.sales_intelligence import SalesIntelligenceProfile
 from core.utils.exceptions import NotFoundError, ValidationError
 
 log = get_logger(__name__)
@@ -67,6 +69,7 @@ async def generate_outreach_drafts(
     # Map contacts to their companies and generate drafts
     generated_drafts = []
     llm = get_llm_provider()
+    qa_engine = CampaignQAEngine()
 
     for contact in contacts:
         # Load Company
@@ -77,42 +80,59 @@ async def generate_outreach_drafts(
             continue
 
         # Load Research Profile (generate on the fly if missing)
-        profile_stmt = select(ResearchProfile).where(ResearchProfile.company_id == company.id)
+        profile_stmt = select(SalesIntelligenceProfile).where(SalesIntelligenceProfile.company_id == company.id)
         profile_res = await session.execute(profile_stmt)
         profile = profile_res.scalar_one_or_none()
         if not profile:
-            log.info("ResearchProfile missing; generating dynamically", company=company.name)
-            profile_agent = ResearchProfileAgent()
+            log.info("SalesIntelligenceProfile missing; generating dynamically", company=company.name)
+            profile_agent = SalesIntelligenceAgent()
             agent_res = await profile_agent.run(company_id=company.id, session=session)
             if agent_res["success"]:
                 profile_res = await session.execute(profile_stmt)
                 profile = profile_res.scalar_one_or_none()
 
-        # Opportunity Score Gate (Phase 7 Autonomy)
-        if profile and profile.opportunity_score < 70:
-            log.info("Skipping draft generation due to low opportunity score", company=company.name, score=profile.opportunity_score)
-            continue
+        profile_config = get_business_profile()
 
-        # Build personalization context
-        why_now_analysis = profile.raw_evidence.get("why_now_analysis", {}) if profile else {}
-        why_now_summary = why_now_analysis.get("summary", "Fast-growing market player.")
-        chain_of_reasoning = why_now_analysis.get("chain_of_reasoning", [])
-        pain_str = ", ".join([p.get("insight", "") for p in profile.public_pain_points]) if profile else "scaling team"
-        hiring_str = ", ".join([h.get("insight", "") for h in profile.hiring_signals]) if profile else "hiring engineers"
-        news_str = ", ".join([n.get("title", "") for n in profile.recent_news]) if profile else "recent updates"
-        opportunity_score = profile.opportunity_score if profile else 50
-        why_now_score = profile.why_now_score if profile else 50
+        # Build personalization context from Outreach Intelligence and Product Mapping
+        if profile and profile.outreach_intelligence:
+            outreach = profile.outreach_intelligence
+            best_opening = outreach.get("best_opening_sentence", "")
+            achievement = outreach.get("relevant_achievement", "")
+            pain_point = outreach.get("relevant_pain_point", "")
+            cta = outreach.get("recommended_cta", "")
+            tone = outreach.get("recommended_tone", profile_config.email_tone)
+            
+            # Fetch Playbook and Trigger context from Sales Intelligence
+            primary_trigger = getattr(profile, "primary_trigger", "General Outreach")
+            playbook_name = getattr(profile, "recommended_playbook", "General")
+            
+            # Look up Playbook Details from config
+            playbook = next((p for p in profile_config.playbooks if p.name == playbook_name), None)
+            playbook_strategy = playbook.messaging_strategy if playbook else "Pitch the product naturally."
+            playbook_cta = playbook.cta_style if playbook else "Ask for a quick chat."
 
-        prompt = (
-            f"Write a personalized cold email to {contact.full_name} ({contact.job_title}) at {company.name}.\n"
-            f"Company Context (Why Now): {why_now_summary}\n"
-            f"Reasoning Chain: {' -> '.join(chain_of_reasoning)}\n"
-            f"Hiring Signals: {hiring_str}\n"
-            f"Recent News: {news_str}\n"
-            f"Identified Pain Points: {pain_str}\n"
-            f"Opportunity Score: {opportunity_score}/100, Why Now Score: {why_now_score}/100\n"
-            f"Keep it short, relevant, and compelling. Leverage the 'Why Now' reasoning to pitch Outur AI's automated recruitment agents. Output JSON matching the outreach email schema."
-        )
+            prompt = (
+                f"Write a personalized cold email to {contact.full_name} ({contact.job_title}) at {company.name}.\n"
+                f"Trigger Event (Why we are emailing them now): {primary_trigger}\n"
+                f"Playbook Strategy to follow: {playbook_strategy}\n"
+                f"Tone: {tone}\n"
+                f"Opening: {best_opening}\n"
+                f"Highlight Achievement: {achievement}\n"
+                f"Address Pain Point: {pain_point}\n"
+                f"Call to Action: {playbook_cta} (Or fallback to: {cta})\n"
+                f"CRITICAL RULES:\n"
+                f"- Subject Line Rules: {', '.join(profile_config.subject_line_rules)}\n"
+                f"- Messaging Guardrails: {', '.join(profile_config.messaging_guardrails)}\n"
+                f"- Forbidden Claims: {', '.join(profile_config.forbidden_claims)}\n"
+                f"Keep it compelling and tailored to {profile_config.company_name}'s value propositions. Output JSON matching the outreach email schema."
+            )
+        else:
+            primary_trigger = "General Outreach"
+            playbook_name = "General Playbook"
+            prompt = (
+                f"Write a personalized cold email to {contact.full_name} ({contact.job_title}) at {company.name}.\n"
+                f"Keep it short, relevant, and compelling. Leverage any available data to pitch {profile_config.company_name}'s {profile_config.product_name}. Output JSON matching the outreach email schema."
+            )
 
         email_data = await llm.generate_json(prompt, EMAIL_SCHEMA)
         if not email_data:
@@ -121,13 +141,39 @@ async def generate_outreach_drafts(
             body = (
                 f"Hi {contact.full_name},\n\n"
                 f"I noticed {company.name} is scaling your operations and managing team growth. "
-                f"With your role as {contact.job_title}, I thought Outur AI's automated recruitment agents "
-                f"could simplify candidate matches to resolve backend scaling paint points.\n\n"
-                f"Best,\nOutur AI team"
+                f"With your role as {contact.job_title}, I thought Kultrp's culture scaling platform "
+                f"could simplify employee onboarding and remote collaboration.\n\n"
+                f"Best,\nKultrp team"
             )
         else:
             subject = email_data["subject"]
             body = email_data["body"]
+            
+        # 1st QA Pass
+        qa_report = await qa_engine.evaluate_email(subject, body, contact, company, profile)
+        
+        # Regeneration logic
+        if not qa_report.get("approved"):
+            log.info("QA failed, regenerating email once", issues=qa_report.get("issues"))
+            issues_str = "\n".join(qa_report.get("issues", []))
+            rec_str = "\n".join(qa_report.get("recommendations", []))
+            regen_prompt = (
+                f"{prompt}\n\n"
+                f"Previous attempt was rejected by QA for the following issues:\n{issues_str}\n"
+                f"Please apply these recommendations:\n{rec_str}\n"
+                f"Do not hallucinate any information. Make it highly personalized and professional."
+            )
+            email_data_regen = await llm.generate_json(regen_prompt, EMAIL_SCHEMA)
+            if email_data_regen:
+                subject = email_data_regen["subject"]
+                body = email_data_regen["body"]
+                
+                # 2nd QA Pass
+                qa_report = await qa_engine.evaluate_email(subject, body, contact, company, profile)
+
+        # approval_status requires manual intervention now. We just record QA status.
+        approval_status = "pending_approval" if qa_report.get("approved") else "rejected"
+        qa_score = qa_report.get("overall_score")
 
         # Check if draft already exists to avoid duplicates
         existing_stmt = select(OutreachDraft).where(
@@ -140,6 +186,11 @@ async def generate_outreach_drafts(
         if existing_draft:
             existing_draft.subject = subject
             existing_draft.body = body
+            existing_draft.approval_status = approval_status
+            existing_draft.qa_score = qa_score
+            existing_draft.qa_report = qa_report
+            existing_draft.primary_trigger = primary_trigger
+            existing_draft.playbook_used = playbook_name
             session.add(existing_draft)
             generated_drafts.append(existing_draft)
         else:
@@ -147,7 +198,12 @@ async def generate_outreach_drafts(
                 campaign_id=campaign.id,
                 contact_id=contact.id,
                 subject=subject,
-                body=body
+                body=body,
+                approval_status=approval_status,
+                qa_score=qa_score,
+                qa_report=qa_report,
+                primary_trigger=primary_trigger,
+                playbook_used=playbook_name
             )
             session.add(new_draft)
             generated_drafts.append(new_draft)
@@ -248,3 +304,98 @@ async def export_campaign_drafts(
 
     else:
         raise ValidationError(f"Unsupported export format '{export_format}'. Supported formats: csv, gmail_draft, outlook_draft.")
+
+
+async def generate_followup_draft(
+    campaign_id: uuid.UUID,
+    contact_id: uuid.UUID,
+    action_type: str,
+    session: AsyncSession
+) -> OutreachDraft:
+    """
+    Generate a follow-up outreach email draft for a specific contact using campaign context
+    and existing outreach history.
+    """
+    # 1. Fetch Contact
+    contact = await session.get(Contact, contact_id)
+    if not contact:
+        raise NotFoundError("Contact", contact_id)
+        
+    # 2. Fetch Company
+    company = await session.get(Company, contact.company_id)
+    if not company:
+        raise NotFoundError("Company", contact.company_id)
+
+    # 3. Fetch Sales Intelligence Profile
+    profile_stmt = select(SalesIntelligenceProfile).where(SalesIntelligenceProfile.company_id == company.id)
+    profile = (await session.execute(profile_stmt)).scalar_one_or_none()
+
+    # 4. Fetch Previous Outreach Drafts to get thread history
+    stmt = select(OutreachDraft).where(
+        OutreachDraft.campaign_id == campaign_id,
+        OutreachDraft.contact_id == contact_id
+    ).order_by(OutreachDraft.created_at.desc())
+    prev_drafts = list((await session.execute(stmt)).scalars().all())
+
+    last_subject = ""
+    last_body = ""
+    if prev_drafts:
+        last_subject = prev_drafts[0].subject
+        last_body = prev_drafts[0].body
+
+    llm = get_llm_provider()
+    
+    # 5. Build prompt based on action type
+    action_clean = action_type.upper()
+    
+    instruction = "Write a polite follow-up email."
+    if action_clean == "CHANGE_SUBJECT":
+        instruction = "Write a follow-up email but use a completely different, more catchy subject line."
+    elif action_clean == "CHANGE_TONE":
+        instruction = "Write a follow-up email but change the tone to be more direct and casual."
+    elif action_clean == "SHORTEN_EMAIL":
+        instruction = "Write a follow-up email that is extremely short and concise (under 3 sentences)."
+    elif action_clean == "GENERATE_NEW_EMAIL":
+        instruction = "Write a completely new outreach email with a fresh angle focusing on a different pain point."
+
+    pain_str = ", ".join([p.get("pain_point", "") for p in profile.pain_points]) if profile else "scaling team"
+    news_str = ", ".join([n.get("title", "") for n in profile.recent_news]) if profile else "recent updates"
+    
+    prompt = (
+        f"{instruction}\n"
+        f"Recipient: {contact.full_name} ({contact.job_title}) at {company.name}\n"
+        f"Previous Subject: {last_subject}\n"
+        f"Previous Body: {last_body}\n"
+        f"Company News: {news_str}\n"
+        f"Pain Points: {pain_str}\n"
+        f"Leverage this information to compose the next follow-up. Output JSON matching the outreach email schema."
+    )
+
+    email_data = await llm.generate_json(prompt, EMAIL_SCHEMA)
+    
+    profile_config = get_business_profile()
+
+    if not email_data:
+        subject = f"Re: {last_subject}" if last_subject else f"Following up: {profile_config.company_name} x {company.name}"
+        body = (
+            f"Hi {contact.full_name},\n\n"
+            f"Just following up on my previous message. Wanted to see if you had 5 minutes "
+            f"this week to chat about optimizing your operations at {company.name}.\n\n"
+            f"Best,\n{profile_config.company_name} team"
+        )
+    else:
+        subject = email_data["subject"]
+        body = email_data["body"]
+
+    # Save new follow-up draft
+    new_draft = OutreachDraft(
+        campaign_id=campaign_id,
+        contact_id=contact_id,
+        subject=subject,
+        body=body,
+        status="draft"
+    )
+    session.add(new_draft)
+    await session.commit()
+    return new_draft
+

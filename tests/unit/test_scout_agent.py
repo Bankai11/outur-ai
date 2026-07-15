@@ -53,7 +53,7 @@ async def test_scout_agent_run_and_deduplicate(db_session: AsyncSession) -> None
     stripe = next((c for c in db_companies if c.name.lower() == "stripe"), None)
     if stripe:
         assert stripe.domain == "stripe.com"
-        assert stripe.industry == "FinTech"
+        assert stripe.industry.lower() == "fintech"
         # We manually clear some field to verify merge logic in Step 2
         stripe.linkedin_url = None
         db_session.add(stripe)

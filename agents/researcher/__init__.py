@@ -1,7 +1,7 @@
 """Researcher Agent package."""
 
 from agents.researcher.agent import ResearcherAgent
-from agents.researcher.research_profile_agent import ResearchProfileAgent
+from agents.researcher.sales_intelligence_agent import SalesIntelligenceAgent
 
-__all__ = ["ResearcherAgent", "ResearchProfileAgent"]
+__all__ = ["ResearcherAgent", "SalesIntelligenceAgent"]
 

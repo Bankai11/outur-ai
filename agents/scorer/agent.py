@@ -14,15 +14,14 @@ Saves score, tier, and signals to the Company database table.
 from __future__ import annotations
 
 from typing import Any
-import uuid
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import async_session_factory
 from core.logger import get_logger
-from core.models.company import Company
 from core.models.contact import Contact
+from core.services.company_resolver import resolve_company
 from core.utils.exceptions import NotFoundError
 
 log = get_logger(__name__)
@@ -103,32 +102,23 @@ class ScorerAgent:
         commit: bool = True
     ) -> dict[str, Any]:
         # 1. Resolve Company record
-        company_obj: Company | None = None
-        if company and isinstance(company, Company):
-            company_obj = company
-        elif company_id:
-            # Parse UUID safely
-            if isinstance(company_id, str):
-                try:
-                    resolved_uuid = uuid.UUID(company_id)
-                except ValueError:
-                    raise NotFoundError("Company", company_id)
-            else:
-                resolved_uuid = company_id
-
-            stmt = select(Company).where(Company.id == resolved_uuid)
-            res = await session.execute(stmt)
-            company_obj = res.scalar_one_or_none()
-
-        if not company_obj:
-            raise NotFoundError("Company", company_id)
+        company_obj = await resolve_company(company_id, session, company=company)
 
         # 2. Extract context details
-        slug = (company_obj.domain or company_obj.name).lower()
-        # Generate deterministic mock growth & size metrics based on company name hash
-        h = hash(slug)
-        size = 10 + (abs(h) % 490)       # 10 to 500 headcount
-        growth = 1 + (abs(h) % 49)       # 1% to 50% growth
+        enrichment = company_obj.enrichment_data or {}
+        # enrichment_data on the Company model stores CompanyEnrichment directly
+        buying_signals = enrichment.get("buying_signals") or {}
+
+        # Use real enriched data or default to 0 if the LLM couldn't find it
+        size = enrichment.get("employee_count_verification")
+        if size is None:
+            size = 0
+        
+        recent_growth_signal = buying_signals.get("recent_growth")
+        if recent_growth_signal:
+            growth = 30  # Strong growth signal
+        else:
+            growth = 0
 
         # Fetch contacts explicitly
         contacts_stmt = select(Contact).where(Contact.company_id == company_obj.id)
@@ -144,7 +134,8 @@ class ScorerAgent:
 
         # Industry Fit (Max 20 pts)
         ind_fit_list = {"saas", "fintech", "tech", "ai", "healthtech", "biotech"}
-        company_ind = (company_obj.industry or "").lower()
+        company_ind = enrichment.get("industry") or company_obj.industry or ""
+        company_ind = company_ind.lower()
         if any(fit in company_ind for fit in ind_fit_list):
             score += 20
             signals.append("industry_fit")

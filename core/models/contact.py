@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import ForeignKey, Integer, String, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.models.base import AbstractModel
@@ -34,6 +34,7 @@ class Contact(AbstractModel):
     retrieved_at: Mapped[datetime | None] = mapped_column(nullable=True)
     verification_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     mx_valid: Mapped[bool | None] = mapped_column(nullable=True)
+    enrichment_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     # Relationships
     company: Mapped[Company] = relationship("Company", back_populates="contacts")

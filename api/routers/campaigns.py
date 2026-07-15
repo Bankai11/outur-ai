@@ -12,6 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_session
 from agents.campaign_manager import generate_outreach_drafts, export_campaign_drafts
+from agents.icp_discovery.discovery_agent import ICPDiscoveryAgent
+from agents.icp_discovery.schema import CampaignRequirements
+from agents.scout.agent import ScoutAgent
 from core.models.campaign import Campaign
 from core.models.outreach_draft import OutreachDraft
 from core.utils.pagination import OffsetParams, PaginatedResponse
@@ -50,6 +53,10 @@ class OutreachDraftSchema(BaseModel):
     subject: str
     body: str
     status: str
+    approval_status: str
+    qa_score: int | None = None
+    qa_report: dict | None = None
+    operator_notes: str | None = None
 
 
 class GenerateResponse(BaseModel):
@@ -77,6 +84,10 @@ class EnrichedDraftSchema(BaseModel):
     hiring_signals: list[str]
     recent_news: list[str]
     pain_points: list[str]
+    
+class DraftUpdateSchema(BaseModel):
+    approval_status: str | None = None
+    operator_notes: str | None = None
 
 
 class CampaignDraftsResponse(BaseModel):
@@ -133,6 +144,77 @@ async def list_campaigns(
     items = res.scalars().all()
 
     return PaginatedResponse.create(items=items, total=total, params=params)
+
+
+@router.post("/{id}/discover", status_code=status.HTTP_200_OK)
+async def discover_prospects(
+    id: UUID,
+    limit: int = Query(10, description="Max companies to discover and save"),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """
+    Triggers ICP Discovery using the campaign's filters as requirements.
+    Ranks prospects and then passes them to ScoutAgent for saving.
+    """
+    log.info("Discovering prospects for campaign", id=str(id))
+    
+    # 1. Fetch campaign and requirements
+    stmt = select(Campaign).where(Campaign.id == id)
+    res = await session.execute(stmt)
+    campaign = res.scalar_one_or_none()
+    
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+        
+    filters = campaign.filters or {}
+    requirements = CampaignRequirements(**filters)
+    
+    # 2. Discover and Rank
+    discovery_agent = ICPDiscoveryAgent()
+    ranked_companies = await discovery_agent.discover_and_rank(requirements, limit=limit)
+    
+    if not ranked_companies:
+        return {
+            "success": True,
+            "data": [],
+            "message": "No matching companies found based on criteria.",
+            "errors": []
+        }
+        
+    # 3. Format for ScoutAgent and save
+    companies_list = []
+    for rc in ranked_companies:
+        companies_list.append({
+            "name": rc.company_name,
+            "website": rc.website,
+            "industry": rc.industry,
+            "location": rc.country,
+            "source": "icp_discovery"
+        })
+        
+    scout_agent = ScoutAgent()
+    scout_result = await scout_agent.run(companies_list=companies_list, session=session, limit=limit)
+    
+    if not scout_result.get("success"):
+        raise HTTPException(status_code=500, detail="Failed to save discovered companies via ScoutAgent")
+        
+    saved_companies = scout_result.get("data", {}).get("companies", [])
+    
+    # Update Campaign's selected_companies
+    selected = set(campaign.selected_companies)
+    for c in saved_companies:
+        selected.add(c["id"])
+    campaign.selected_companies = list(selected)
+    session.add(campaign)
+    await session.commit()
+    
+    # Return ranked companies + ids
+    return {
+        "success": True,
+        "data": [c.model_dump() for c in ranked_companies],
+        "saved_count": len(saved_companies),
+        "errors": []
+    }
 
 
 @router.post("/{id}/generate", response_model=GenerateResponse, status_code=status.HTTP_200_OK)
@@ -213,6 +295,36 @@ async def get_campaign_drafts(
     }
 
 
+@router.patch("/{id}/drafts/{draft_id}", response_model=OutreachDraftSchema, status_code=status.HTTP_200_OK)
+async def update_draft_review(
+    id: UUID,
+    draft_id: UUID,
+    payload: DraftUpdateSchema,
+    session: AsyncSession = Depends(get_session),
+) -> OutreachDraft:
+    """
+    Manually review and update a draft's QA status and operator notes.
+    """
+    stmt = select(OutreachDraft).where(
+        OutreachDraft.campaign_id == id,
+        OutreachDraft.id == draft_id
+    )
+    res = await session.execute(stmt)
+    draft = res.scalar_one_or_none()
+    
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+        
+    if payload.approval_status is not None:
+        draft.approval_status = payload.approval_status
+    if payload.operator_notes is not None:
+        draft.operator_notes = payload.operator_notes
+        
+    await session.commit()
+    await session.refresh(draft)
+    return draft
+
+
 @router.post("/{id}/export", status_code=status.HTTP_200_OK)
 async def export_campaign_outreach(
     id: UUID,
@@ -271,7 +383,8 @@ async def send_campaign_outreach(
             .where(
                 OutreachDraft.campaign_id == id,
                 OutreachDraft.status == "draft",
-                OutreachDraft.sent_at.is_(None)
+                OutreachDraft.sent_at.is_(None),
+                OutreachDraft.approval_status == "approved"
             )
         )
         res = await session.execute(stmt)

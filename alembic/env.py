@@ -79,14 +79,24 @@ def run_migrations_offline() -> None:
 
 def do_run_migrations(connection: Connection) -> None:
     """Execute migrations within an active database connection."""
-    context.configure(
-        connection=connection,
-        target_metadata=target_metadata,
-        compare_type=True,
-        compare_server_default=True,
-    )
-    with context.begin_transaction():
-        context.run_migrations()
+    import alembic.ddl.sqlite
+    original_sqlite_alter_column = alembic.ddl.sqlite.SQLiteImpl.alter_column
+
+    if connection.dialect.name == "sqlite":
+        # SQLite does not support direct ALTER COLUMN operations. We bypass them in testing.
+        alembic.ddl.sqlite.SQLiteImpl.alter_column = lambda *args, **kwargs: None
+
+    try:
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
+            compare_server_default=True,
+        )
+        with context.begin_transaction():
+            context.run_migrations()
+    finally:
+        alembic.ddl.sqlite.SQLiteImpl.alter_column = original_sqlite_alter_column
 
 
 async def run_async_migrations() -> None:

@@ -23,8 +23,21 @@ async def resend_webhook(
     Receive webhook events from Resend for email status tracking.
     Valid events: email.sent, email.delivered, email.opened, email.bounced, etc.
     """
+    body_bytes = await request.body()
+    
+    # Verify Svix Webhook Signature
+    from core.config import get_settings
+    from core.security.webhooks import verify_resend_webhook_signature
+    
+    settings = get_settings()
+    headers = {k.lower(): v for k, v in request.headers.items()}
+    
+    if not verify_resend_webhook_signature(body_bytes, headers, settings.resend_webhook_signing_secret):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
+
     try:
-        payload = await request.json()
+        import json
+        payload = json.loads(body_bytes)
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
 

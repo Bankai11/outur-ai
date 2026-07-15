@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.deps import get_session
 from core.models.company import Company
 from core.models.contact import Contact
-from core.models.research_profile import ResearchProfile
+from core.models.sales_intelligence import SalesIntelligenceProfile
 from core.models.outreach_draft import OutreachDraft
 from core.logger import get_logger
 
@@ -43,8 +43,8 @@ async def get_dashboard_metrics(
     res_emails = await session.execute(stmt_emails)
     verified_emails = res_emails.scalar() or 0
 
-    # 4. High Opportunity (Research profiles with opportunity_score > 70)
-    stmt_high_opp = select(func.count()).select_from(ResearchProfile).where(ResearchProfile.opportunity_score > 70)
+    # 4. High Opportunity (Profiles with confidence_score > 70)
+    stmt_high_opp = select(func.count()).select_from(SalesIntelligenceProfile).where(SalesIntelligenceProfile.confidence_score > 70)
     res_high_opp = await session.execute(stmt_high_opp)
     high_opportunity = res_high_opp.scalar() or 0
 

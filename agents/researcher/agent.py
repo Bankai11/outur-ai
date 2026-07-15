@@ -18,8 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from agents.researcher.providers import PROVIDERS
 from core.database import async_session_factory
 from core.logger import get_logger
-from core.models.company import Company
 from core.models.contact import Contact
+from core.services.company_resolver import resolve_company
 from core.utils.exceptions import NotFoundError
 
 log = get_logger(__name__)
@@ -116,25 +116,7 @@ class ResearcherAgent:
         commit: bool = True
     ) -> dict[str, Any]:
         # 1. Resolve Company record
-        company_obj: Company | None = None
-        if company and isinstance(company, Company):
-            company_obj = company
-        elif company_id:
-            # Parse UUID safely
-            if isinstance(company_id, str):
-                try:
-                    resolved_uuid = uuid.UUID(company_id)
-                except ValueError:
-                    raise NotFoundError("Company", company_id)
-            else:
-                resolved_uuid = company_id
-
-            stmt = select(Company).where(Company.id == resolved_uuid)
-            res = await session.execute(stmt)
-            company_obj = res.scalar_one_or_none()
-
-        if not company_obj:
-            raise NotFoundError("Company", company_id)
+        company_obj = await resolve_company(company_id, session, company=company)
 
         log.info("Researched company identified", company_name=company_obj.name)
 
@@ -152,7 +134,7 @@ class ResearcherAgent:
         # 3. Query all providers in parallel
         raw_contacts: list[dict[str, Any]] = []
         tasks = [
-            p.discover_contacts(company_obj.name, company_obj.domain)
+            p.discover_contacts(company_name=company_obj.name, domain=company_obj.domain)
             for p in PROVIDERS
         ]
         

@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     # ── Application ────────────────────────────────────────────────────────
     app_name: str = Field(default="Outur AI", description="Human-readable application name")
     app_version: str = Field(default="0.1.0")
-    app_env: Environment = Field(default=Environment.DEVELOPMENT)
+    app_env: Environment = Field(default=Environment.PRODUCTION)
     app_debug: bool = Field(default=False)
     app_secret_key: str = Field(default="CHANGE_ME", min_length=32)
 
@@ -84,9 +84,24 @@ class Settings(BaseSettings):
     gemini_api_key: str = Field(default="", description="Google Gemini API key")
     antigravity_env: str = Field(default="local", description="local | cloud")
     gemini_model: str = Field(default="gemini-2.0-flash-exp")
+    tavily_api_key: str = Field(default="", description="Tavily API key")
+
+    # ── Webhooks & Integration Secrets ─────────────────────────────────────
+    resend_api_key: str = Field(
+        default="",
+        description="Resend API key"
+    )
+    resend_webhook_signing_secret: str = Field(
+        default="", 
+        description="Signing secret for verifying Resend webhooks"
+    )
+    api_auth_token: str = Field(
+        default="secret-api-token",
+        description="Token required for management API calls"
+    )
 
     # ── Authentication ─────────────────────────────────────────────────────
-    jwt_secret_key: str = Field(default="CHANGE_ME", min_length=32)
+    jwt_secret_key: str = Field(default="CHANGE_ME_TO_A_32_CHAR_STRING_VALUE_HERE", min_length=32)
     jwt_algorithm: str = Field(default="HS256")
     jwt_access_token_expire_minutes: int = Field(default=30, ge=1)
     jwt_refresh_token_expire_days: int = Field(default=7, ge=1)

@@ -7,8 +7,7 @@ from unittest.mock import patch, MagicMock, AsyncMock
 import pytest
 
 from agents.scout.providers.csv_import import ManualCSVImportProvider
-from agents.scout.providers.google_search import GoogleSearchProvider
-from agents.scout.providers.linkedin import LinkedInProvider
+from agents.scout.providers.web_search import WebSearchProvider
 from core.llm.base import BaseLLMProvider
 
 
@@ -51,8 +50,9 @@ async def test_search_based_providers_no_mock_data() -> None:
     when the LLM returns no results.
     """
     mock_llm = MockLLMProvider(return_val=[])
-    with patch("agents.scout.providers.base.get_llm_provider", return_value=mock_llm):
-        provider = GoogleSearchProvider()
+    with patch("agents.scout.providers.base.get_llm_provider", return_value=mock_llm), \
+         patch("core.services.search.tavily_provider.TavilySearchProvider.search", return_value=[{"title": "test", "url": "https://test.com", "content": "test"}]):
+        provider = WebSearchProvider()
         results = await provider.discover(industry="FinTech", location="San Francisco")
         
         assert len(results) == 0
@@ -63,9 +63,9 @@ async def test_search_based_providers_no_mock_data() -> None:
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_linkedin_provider_returns_llm_data_with_evidence() -> None:
+async def test_web_search_provider_returns_llm_data_with_evidence() -> None:
     """
-    Test LinkedInProvider returns the data from the LLM call and attaches the source,
+    Test WebSearchProvider returns the data from the LLM call and attaches the source,
     enforcing that only records with valid evidence are returned.
     """
     mock_llm_response = [
@@ -88,13 +88,14 @@ async def test_linkedin_provider_returns_llm_data_with_evidence() -> None:
     ]
     
     mock_llm = MockLLMProvider(return_val=mock_llm_response)
-    with patch("agents.scout.providers.base.get_llm_provider", return_value=mock_llm):
-        provider = LinkedInProvider()
+    with patch("agents.scout.providers.base.get_llm_provider", return_value=mock_llm), \
+         patch("core.services.search.tavily_provider.TavilySearchProvider.search", return_value=[{"title": "test", "url": "https://test.com", "content": "test"}]):
+        provider = WebSearchProvider()
         results = await provider.discover(industry="AI", location="San Francisco")
         
         assert len(results) == 1
         assert results[0]["name"] == "Ai Startup"
-        assert results[0]["source"] == "linkedin"
+        assert results[0]["source"] == "web_search"
         assert mock_llm.call_count == 1
 
 
@@ -148,8 +149,9 @@ async def test_provider_caching() -> None:
     ]
     
     mock_llm = MockLLMProvider(return_val=mock_llm_response)
-    with patch("agents.scout.providers.base.get_llm_provider", return_value=mock_llm):
-        provider = GoogleSearchProvider()
+    with patch("agents.scout.providers.base.get_llm_provider", return_value=mock_llm), \
+         patch("core.services.search.tavily_provider.TavilySearchProvider.search", return_value=[{"title": "test", "url": "https://test.com", "content": "test"}]):
+        provider = WebSearchProvider()
         
         # First call (cache miss)
         results1 = await provider.discover(industry="CacheTech")
@@ -181,8 +183,9 @@ async def test_provider_retry_logic() -> None:
     
     # Need to patch wait to avoid sleeping during tests
     with patch("agents.scout.providers.base.get_llm_provider", return_value=mock_llm), \
+         patch("core.services.search.tavily_provider.TavilySearchProvider.search", return_value=[{"title": "test", "url": "https://test.com", "content": "test"}]), \
          patch("tenacity.nap.time.sleep", return_value=None):
-        provider = GoogleSearchProvider()
+        provider = WebSearchProvider()
         
         results = await provider.discover(industry="RetryTech")
         

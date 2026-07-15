@@ -96,79 +96,60 @@ flowchart TB
 
 ---
 
-## Quick Start
+## Quick Start (Zero-Configuration)
 
-The fastest way to get Outur AI running is using Docker Compose.
+The fastest way to get started with Outur AI is using our new CLI. You don't need to edit any configuration files manually!
 
 ```bash
 # 1. Clone the repository
 git clone https://github.com/Bankai11/outur-ai.git
 cd outur-ai
 
-# 2. Copy environment variables
-cp .env.example .env
-
-# 3. Add your Gemini API key to .env
-# GEMINI_API_KEY="your_api_key_here"
-
-# 4. Start all services
-docker compose up -d --build
-
-# 5. Run database migrations
-docker compose exec app uv run alembic upgrade head
-```
-
-The API will be available at `http://localhost:8000`.
-
----
-
-## Local Development
-
-For active development, you can run the services locally using `uv`.
-
-```bash
-# 1. Install dependencies
+# 2. Install dependencies using uv
 uv sync
 
-# 2. Start infrastructure (PostgreSQL & Redis only)
-docker compose up -d postgres redis
-
-# 3. Run database migrations
-uv run alembic upgrade head
-
-# 4. Start the FastAPI development server
-uv run uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
-
-# 5. Start the background worker (in a new terminal)
-uv run arq core.queue.worker.WorkerSettings
+# 3. Run the setup wizard!
+uv run python -m cli.main init
 ```
 
----
-
-## Environment Variables
-
-Configure these values in your `.env` file:
-
-| Variable          | Purpose                                |
-| ----------------- | -------------------------------------- |
-| `DATABASE_URL`    | PostgreSQL connection string           |
-| `REDIS_URL`       | Redis connection string                |
-| `GEMINI_API_KEY`  | Google Gemini / LLM access key         |
-| `APP_SECRET_KEY`  | JWT Authentication signing key         |
+The `init` wizard will guide you step-by-step. It will check your system, ask for your API keys (Gemini, Tavily, etc.), and ask a few simple questions about your business to set up your AI Sales Brain.
 
 ---
 
-## How to Use
+## How to Use the CLI
 
-Follow this step-by-step guide to run your first outbound campaign:
+Once initialized, you can manage your entire outbound operation directly from the terminal.
 
-1. **Create a company profile**: Define your target industry, location, and company size using the Scout Agent.
-2. **Generate research context**: The Researcher Agent will automatically find key decision-makers and contacts associated with the discovered companies.
-3. **Score and qualify leads**: The Scorer Agent grades the leads, filtering out low-quality targets and identifying Tier A prospects.
-4. **Create an outreach campaign**: Group your Tier A leads into a structured campaign.
-5. **Generate AI-personalized messages**: The Campaign Manager will use the research profiles to draft hyper-personalized email copy tailored to each specific contact.
-6. **Queue and send messages**: Approve the drafts and dispatch them to the background worker queue for sending.
-7. **Monitor analytics**: Track open rates, replies, and campaign performance via the dashboard.
+**1. Launch a Campaign**
+Just describe what you want in plain English!
+```bash
+uv run python -m cli.main run
+```
+*Example: "Find me 50 HR Managers at mid-sized SaaS companies in London who are actively hiring."*
+
+**2. Review Drafts**
+Check the emails the AI wrote for you before sending them:
+```bash
+uv run python -m cli.main review
+```
+
+**3. Send Emails**
+Send all the drafts you just approved:
+```bash
+uv run python -m cli.main send
+```
+
+**4. Check System Health**
+Having issues? Run the doctor to verify your setup:
+```bash
+uv run python -m cli.main doctor
+```
+
+**5. Update Settings**
+View or change your business profile and API keys:
+```bash
+uv run python -m cli.main config
+```
 
 ---
 

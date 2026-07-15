@@ -35,11 +35,19 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next: object) -> Response:
-        request_id = str(uuid.uuid4())
+        # Support X-Request-ID and X-Correlation-ID tracing
+        req_id_header = request.headers.get("X-Request-ID")
+        corr_id_header = request.headers.get("X-Correlation-ID")
 
-        # Bind request_id so all downstream log calls include it automatically
+        request_id = req_id_header or str(uuid.uuid4())
+        correlation_id = corr_id_header or request_id
+
+        # Bind tracing variables so all downstream log calls include them automatically
         structlog.contextvars.clear_contextvars()
-        structlog.contextvars.bind_contextvars(request_id=request_id)
+        structlog.contextvars.bind_contextvars(
+            request_id=request_id,
+            correlation_id=correlation_id
+        )
 
         start_time = time.perf_counter()
 
@@ -49,6 +57,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             path=request.url.path,
             query=str(request.url.query) or None,
             client=request.client.host if request.client else None,
+            correlation_id=correlation_id,
         )
 
         try:
@@ -61,6 +70,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 path=request.url.path,
                 elapsed_ms=elapsed_ms,
                 exc_info=exc,
+                correlation_id=correlation_id,
             )
             raise
 
@@ -72,9 +82,12 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             path=request.url.path,
             status_code=response.status_code,
             elapsed_ms=elapsed_ms,
+            correlation_id=correlation_id,
         )
 
-        # Surface request_id to the client for tracing
+        # Surface tracing IDs to the client for tracking
         response.headers["X-Request-ID"] = request_id
+        response.headers["X-Correlation-ID"] = correlation_id
 
         return response
+

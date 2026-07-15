@@ -87,6 +87,8 @@ class ScoutAgent:
             Ideal Customer Profile filters (backward-compatible).
         limit: int
             Max companies to process (default 50).
+        companies_list: list[dict] | None
+            Pre-discovered list of companies to process and deduplicate (bypasses search).
         session: AsyncSession | None
             Optional database session.
         """
@@ -98,6 +100,7 @@ class ScoutAgent:
         company_size = kwargs.get("company_size")
         csv_content = kwargs.get("csv_content")
         csv_file = kwargs.get("csv_file")
+        companies_list = kwargs.get("companies_list")
         limit = kwargs.get("limit", 50)
 
         # Backward compatibility with icp dict
@@ -120,8 +123,12 @@ class ScoutAgent:
 
         # 2. Coordinate discovery providers
         try:
+            if companies_list is not None:
+                # Bypass discovery and use provided list
+                log.info("Using provided companies_list, bypassing discovery providers", count=len(companies_list))
+                raw_companies.extend(companies_list)
             # Check if Manual CSV Import is triggered
-            if csv_content or csv_file:
+            elif csv_content or csv_file:
                 csv_provider = next((p for p in PROVIDERS if p.name == "manual_csv"), None)
                 if csv_provider:
                     results = await csv_provider.discover(

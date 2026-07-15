@@ -27,7 +27,17 @@ class BaseCache(ABC):
 class SQLiteCache(BaseCache):
     """SQLite-backed async cache implementation."""
     
-    def __init__(self, db_path: str = ".outur_cache.db") -> None:
+    def __init__(self, db_path: str | None = None) -> None:
+        if db_path is None:
+            try:
+                from core.config import get_settings
+                settings = get_settings()
+                if settings.app_env == "testing":
+                    db_path = ".outur_cache_test.db"
+                else:
+                    db_path = ".outur_cache.db"
+            except ImportError:
+                db_path = ".outur_cache.db"
         self.db_path = Path(db_path)
         self._init_cache()
 

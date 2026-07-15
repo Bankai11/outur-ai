@@ -18,7 +18,7 @@ https://tools.ietf.org/html/draft-inadarei-api-health-check
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter
@@ -53,7 +53,7 @@ class HealthResponse(BaseModel):
     app: str
     version: str
     environment: str
-    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
     components: dict[str, ComponentStatus] = Field(default_factory=dict)
 
 
@@ -127,8 +127,41 @@ async def readiness_check() -> ORJSONResponse:
         overall_ok = False
         log.warning("Readiness check: database unavailable", latency_ms=db_latency)
 
-    # ── Add future checks here (Redis, external APIs, etc.) ───────────────
+    # ── Redis (ARQ Queue) ──────────────────────────────────────────────────
+    t0 = time.perf_counter()
+    redis_ok = False
+    redis_latency = 0.0
+    try:
+        from core.queue.client import get_redis_pool
+        redis_pool = await get_redis_pool()
+        # Ping connection
+        await redis_pool.ping()
+        redis_ok = True
+        redis_latency = round((time.perf_counter() - t0) * 1000, 2)
+    except Exception as exc:
+        log.warning("Readiness check: Redis unavailable", error=str(exc))
 
+    components["redis"] = ComponentStatus(
+        status="ok" if redis_ok else "unavailable",
+        latency_ms=redis_latency if redis_ok else None,
+        detail=None if redis_ok else "Redis ping failed",
+    )
+    if not redis_ok:
+        overall_ok = False
+
+    # ── LLM Provider (Gemini) ──────────────────────────────────────────────
+    llm_configured = bool(
+        settings.gemini_api_key
+        and settings.gemini_api_key not in ("YOUR_GEMINI_API_KEY_HERE", "test-key", "")
+    )
+    components["llm_provider"] = ComponentStatus(
+        status="ok" if llm_configured else "degraded",
+        detail=None if llm_configured else "Gemini API key is unconfigured or default value used",
+    )
+    if not llm_configured and settings.is_production:
+        overall_ok = False
+
+    # ── Overall Status ─────────────────────────────────────────────────────
     status: Literal["ok", "unavailable"] = "ok" if overall_ok else "unavailable"
     http_status = 200 if overall_ok else 503
 
@@ -141,3 +174,4 @@ async def readiness_check() -> ORJSONResponse:
     )
 
     return ORJSONResponse(status_code=http_status, content=body.model_dump())
+

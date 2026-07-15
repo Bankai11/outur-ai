@@ -22,12 +22,15 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import Settings
 from core.config import get_settings as _get_settings
 from core.database import get_async_session
+
+security = HTTPBearer()
 
 
 # ── Database session ───────────────────────────────────────────────────────
@@ -55,7 +58,26 @@ def get_settings() -> Settings:
     return _get_settings()
 
 
+# ── Authentication ─────────────────────────────────────────────────────────
+
+def get_api_key(
+    credentials: HTTPAuthorizationCredentials = Depends(security),  # noqa: B008
+    settings: Settings = Depends(get_settings),  # noqa: B008
+) -> str:
+    """
+    Validate authorization bearer credentials against system token.
+    """
+    if credentials.credentials != settings.api_auth_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return credentials.credentials
+
+
 # ── Typed aliases (use these in route signatures for clean type hints) ─────
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
+APITokenDep = Annotated[str, Depends(get_api_key)]
